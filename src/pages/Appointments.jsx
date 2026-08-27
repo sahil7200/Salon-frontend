@@ -13,6 +13,7 @@ import { getAppointments, createAppointment, updateAppointmentStatus, getClients
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
 import EmptyState from '../components/common/EmptyState';
+import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_SERVICES = [
   { _id: 'Haircut', name: 'Haircut', durationInMinutes: 30 },
@@ -21,6 +22,8 @@ const DEFAULT_SERVICES = [
 ];
 
 const Appointments = () => {
+  const { user } = useAuth();
+  const isOwner = user?.role === 'SALON_OWNER' || user?.role === 'SUPER_ADMIN';
   const [appointments, setAppointments] = useState([]);
   const [clients, setClients] = useState([]);
   const [staffList, setStaffList] = useState([]);
@@ -85,7 +88,7 @@ const Appointments = () => {
       <PageHeader
         title="Appointments"
         subtitle="Manage client bookings and operational schedule"
-        actionLabel="New Appointment"
+        actionLabel={isOwner ? "New Appointment" : null}
         actionIcon={<AddIcon />}
         onActionClick={() => setOpen(true)}
       />
@@ -100,7 +103,7 @@ const Appointments = () => {
               <TableCell>Date</TableCell>
               <TableCell>Time</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
+              {isOwner && <TableCell>Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
@@ -120,138 +123,142 @@ const Appointments = () => {
                 <TableCell>
                   <StatusChip status={apt.status} />
                 </TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={1}>
-                    {apt.status === 'PENDING' && (
-                      <Tooltip title="Confirm">
-                        <IconButton size="small" color="primary" onClick={() => handleStatusUpdate(apt._id, 'CONFIRMED')}>
-                          <CheckCircleIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {apt.status === 'CONFIRMED' && (
-                      <Tooltip title="Start (In Progress)">
-                        <IconButton size="small" color="info" onClick={() => handleStatusUpdate(apt._id, 'IN_PROGRESS')}>
-                          <PlayArrowIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {apt.status === 'IN_PROGRESS' && (
-                      <Tooltip title="Complete">
-                        <IconButton size="small" color="success" onClick={() => handleStatusUpdate(apt._id, 'COMPLETED')}>
-                          <DoneAllIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {['PENDING', 'CONFIRMED'].includes(apt.status) && (
-                      <Tooltip title="Cancel">
-                        <IconButton size="small" color="error" onClick={() => handleStatusUpdate(apt._id, 'CANCELLED')}>
-                          <CancelIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Stack>
-                </TableCell>
+                {isOwner && (
+                  <TableCell>
+                    <Stack direction="row" spacing={1}>
+                      {apt.status === 'PENDING' && (
+                        <Tooltip title="Confirm">
+                          <IconButton size="small" color="primary" onClick={() => handleStatusUpdate(apt._id, 'CONFIRMED')}>
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {apt.status === 'CONFIRMED' && (
+                        <Tooltip title="Start (In Progress)">
+                          <IconButton size="small" color="info" onClick={() => handleStatusUpdate(apt._id, 'IN_PROGRESS')}>
+                            <PlayArrowIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {apt.status === 'IN_PROGRESS' && (
+                        <Tooltip title="Complete">
+                          <IconButton size="small" color="success" onClick={() => handleStatusUpdate(apt._id, 'COMPLETED')}>
+                            <DoneAllIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {['PENDING', 'CONFIRMED'].includes(apt.status) && (
+                        <Tooltip title="Cancel">
+                          <IconButton size="small" color="error" onClick={() => handleStatusUpdate(apt._id, 'CANCELLED')}>
+                            <CancelIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
-            {appointments.length === 0 && <EmptyState colSpan={7} message="No appointments found" />}
+            {appointments.length === 0 && <EmptyState colSpan={isOwner ? 7 : 6} message="No appointments found" />}
           </TableBody>
         </Table>
       </TableContainer>
 
       {/* Booking Dialog */}
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <Box component="form" onSubmit={handleCreate}>
-          <DialogTitle sx={{ fontWeight: 600 }}>Create New Appointment</DialogTitle>
-          <DialogContent>
-            {error && (
-              <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
-                {error}
-              </Alert>
-            )}
-            <Stack spacing={2.5} sx={{ mt: 1 }}>
-              <TextField
-                select
-                label="Client"
-                value={form.client}
-                onChange={(e) => setForm({ ...form, client: e.target.value })}
-                required
-                fullWidth
-              >
-                {clients.map((c) => (
-                  <MenuItem key={c._id} value={c._id}>
-                    {c.name} ({c.phone})
-                  </MenuItem>
-                ))}
-              </TextField>
+      {isOwner && (
+        <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+          <Box component="form" onSubmit={handleCreate}>
+            <DialogTitle sx={{ fontWeight: 600 }}>Create New Appointment</DialogTitle>
+            <DialogContent>
+              {error && (
+                <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
+                  {error}
+                </Alert>
+              )}
+              <Stack spacing={2.5} sx={{ mt: 1 }}>
+                <TextField
+                  select
+                  label="Client"
+                  value={form.client}
+                  onChange={(e) => setForm({ ...form, client: e.target.value })}
+                  required
+                  fullWidth
+                >
+                  {clients.map((c) => (
+                    <MenuItem key={c._id} value={c._id}>
+                      {c.name} ({c.phone})
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-              <TextField
-                select
-                label="Service"
-                value={form.serviceId || form.service}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const found = servicesList.find((s) => s._id === val || s.name === val);
-                  setForm({
-                    ...form,
-                    serviceId: found?._id && found._id.length > 20 ? found._id : undefined,
-                    service: found?.name || val,
-                  });
-                }}
-                required
-                fullWidth
-              >
-                {servicesList.map((s) => (
-                  <MenuItem key={s._id || s.name} value={s._id || s.name}>
-                    {s.name} ({s.durationInMinutes} mins {s.price ? `- ₹${s.price}` : ''})
-                  </MenuItem>
-                ))}
-              </TextField>
+                <TextField
+                  select
+                  label="Service"
+                  value={form.serviceId || form.service}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const found = servicesList.find((s) => s._id === val || s.name === val);
+                    setForm({
+                      ...form,
+                      serviceId: found?._id && found._id.length > 20 ? found._id : undefined,
+                      service: found?.name || val,
+                    });
+                  }}
+                  required
+                  fullWidth
+                >
+                  {servicesList.map((s) => (
+                    <MenuItem key={s._id || s.name} value={s._id || s.name}>
+                      {s.name} ({s.durationInMinutes} mins {s.price ? `- ₹${s.price}` : ''})
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-              <TextField
-                select
-                label="Staff Member"
-                value={form.staff}
-                onChange={(e) => setForm({ ...form, staff: e.target.value })}
-                required
-                fullWidth
-              >
-                {staffList.map((s) => (
-                  <MenuItem key={s._id} value={s._id}>
-                    {s.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                <TextField
+                  select
+                  label="Staff Member"
+                  value={form.staff}
+                  onChange={(e) => setForm({ ...form, staff: e.target.value })}
+                  required
+                  fullWidth
+                >
+                  {staffList.map((s) => (
+                    <MenuItem key={s._id} value={s._id}>
+                      {s.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-              <TextField
-                type="date"
-                label="Date"
-                value={form.date}
-                onChange={(e) => setForm({ ...form, date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                required
-                fullWidth
-              />
+                <TextField
+                  type="date"
+                  label="Date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  fullWidth
+                />
 
-              <TextField
-                type="time"
-                label="Start Time"
-                value={form.startTime}
-                onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                required
-                fullWidth
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 3 }}>
-            <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" variant="contained" disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
-              {loading ? 'Booking...' : 'Book Appointment'}
-            </Button>
-          </DialogActions>
-        </Box>
-      </Dialog>
+                <TextField
+                  type="time"
+                  label="Start Time"
+                  value={form.startTime}
+                  onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  fullWidth
+                />
+              </Stack>
+            </DialogContent>
+            <DialogActions sx={{ px: 3, pb: 3 }}>
+              <Button onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="submit" variant="contained" disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
+                {loading ? 'Booking...' : 'Book Appointment'}
+              </Button>
+            </DialogActions>
+          </Box>
+        </Dialog>
+      )}
     </Box>
   );
 };

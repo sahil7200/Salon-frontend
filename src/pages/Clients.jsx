@@ -8,6 +8,7 @@ import AddIcon from '@mui/icons-material/Add';
 import { getClients, createClient } from '../services/api';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
+import { useAuth } from '../context/AuthContext';
 
 const AVATAR_COLORS = ['#be4b6e', '#5b7e9e', '#c9a96e', '#5b8a5e', '#9a6fb0', '#c9923e'];
 
@@ -18,6 +19,8 @@ const getAvatarColor = (name) => {
 };
 
 const Clients = () => {
+  const { user } = useAuth();
+  const isOwner = user?.role === 'SALON_OWNER' || user?.role === 'SUPER_ADMIN';
   const [clients, setClients] = useState([]);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
@@ -56,7 +59,7 @@ const Clients = () => {
       <PageHeader
         title="Clients"
         subtitle="Manage client contact details"
-        actionLabel="New Client"
+        actionLabel={isOwner ? "New Client" : null}
         actionIcon={<AddIcon />}
         onActionClick={() => setOpen(true)}
       />
@@ -99,42 +102,44 @@ const Clients = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>Create New Client</DialogTitle>
-        <DialogContent>
-          {error && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{error}</Alert>}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Full Name"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Phone Number"
-              placeholder="+91-9876543210"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              type="email"
-              label="Email Address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
-            {loading ? 'Creating...' : 'Create Client'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {isOwner && (
+        <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ fontWeight: 600 }}>Create New Client</DialogTitle>
+          <DialogContent>
+            {error && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{error}</Alert>}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              <TextField
+                label="Full Name"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+                fullWidth
+              />
+              <TextField
+                label="Phone Number"
+                placeholder="+91-9876543210"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                required
+                fullWidth
+              />
+              <TextField
+                type="email"
+                label="Email Address"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                fullWidth
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 3 }}>
+            <Button onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="contained" onClick={handleCreate} disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
+              {loading ? 'Creating...' : 'Create Client'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
     </Box>
   );
 };
