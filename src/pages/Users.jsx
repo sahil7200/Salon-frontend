@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box, Card, CardContent, Table, TableBody, TableCell, TableHead, TableRow,
   Button, Typography, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Alert, Select, MenuItem, FormControl, InputLabel, Chip, Stack
+  TextField, Alert, Select, MenuItem, FormControl, InputLabel, Chip, Stack, Paper
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -21,6 +23,10 @@ const Users = () => {
   const [detailData, setDetailData] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Filters
+  const [selectedSalonFilter, setSelectedSalonFilter] = useState('ALL');
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
 
   // Form State
   const [name, setName] = useState('');
@@ -75,11 +81,27 @@ const Users = () => {
     }
   };
 
+  // Filtered Users List salon-wise
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      // Salon Filter
+      if (selectedSalonFilter !== 'ALL') {
+        const userSalon = u.salonId?._id || u.salonId;
+        if (userSalon !== selectedSalonFilter) return false;
+      }
+      // Role Filter
+      if (selectedRoleFilter !== 'ALL') {
+        if (u.role !== selectedRoleFilter) return false;
+      }
+      return true;
+    });
+  }, [users, selectedSalonFilter, selectedRoleFilter]);
+
   return (
     <Box>
       <PageHeader
-        title="User Management"
-        subtitle={user?.role === 'SUPER_ADMIN' ? 'Manage platform users & salon credentials' : 'Manage receptionist accounts for your salon'}
+        title="User Management (Salon-Wise)"
+        subtitle={user?.role === 'SUPER_ADMIN' ? 'View and manage platform users categorized by salon' : 'Manage receptionist accounts for your salon'}
         actionLabel="Create User"
         actionIcon={<AddIcon />}
         onActionClick={() => setOpenModal(true)}
@@ -97,6 +119,61 @@ const Users = () => {
         </Alert>
       )}
 
+      {/* Salon Filter Toolbar for Super Admin */}
+      {user?.role === 'SUPER_ADMIN' && (
+        <Paper sx={{ p: 2, mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Box display="flex" alignItems="center" gap={1} mr={1}>
+            <FilterListIcon sx={{ color: '#be4b6e' }} />
+            <Typography sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#2c2528' }}>
+              Filter Users Salon-Wise:
+            </Typography>
+          </Box>
+
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Salon</InputLabel>
+            <Select
+              value={selectedSalonFilter}
+              label="Salon"
+              onChange={(e) => setSelectedSalonFilter(e.target.value)}
+            >
+              <MenuItem value="ALL">All Salons</MenuItem>
+              {salons.map((s) => (
+                <MenuItem key={s._id} value={s._id}>
+                  {s.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          <FormControl size="small" sx={{ minWidth: 160 }}>
+            <InputLabel>Role</InputLabel>
+            <Select
+              value={selectedRoleFilter}
+              label="Role"
+              onChange={(e) => setSelectedRoleFilter(e.target.value)}
+            >
+              <MenuItem value="ALL">All Roles</MenuItem>
+              <MenuItem value="SUPER_ADMIN">Super Admin</MenuItem>
+              <MenuItem value="SALON_OWNER">Salon Owner</MenuItem>
+              <MenuItem value="RECEPTIONIST">Receptionist</MenuItem>
+            </Select>
+          </FormControl>
+
+          {(selectedSalonFilter !== 'ALL' || selectedRoleFilter !== 'ALL') && (
+            <Button
+              size="small"
+              onClick={() => {
+                setSelectedSalonFilter('ALL');
+                setSelectedRoleFilter('ALL');
+              }}
+              sx={{ color: '#be4b6e' }}
+            >
+              Reset Filters
+            </Button>
+          )}
+        </Paper>
+      )}
+
       <Card>
         <CardContent sx={{ p: 0 }}>
           <Table>
@@ -105,39 +182,58 @@ const Users = () => {
                 <TableCell>Name</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Role</TableCell>
-                <TableCell>Salon</TableCell>
+                <TableCell>Salon Business</TableCell>
+                <TableCell>Account Status</TableCell>
                 <TableCell>Created At</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
-                <TableSkeleton rows={5} columns={5} />
+                <TableSkeleton rows={5} columns={6} />
               ) : (
-                users.map((u) => (
+                filteredUsers.map((u) => (
                   <TableRow
                     key={u._id}
                     hover
                     onClick={() => setDetailData(u)}
                     sx={{ cursor: 'pointer' }}
                   >
-                    <TableCell sx={{ fontWeight: 500 }}>{u.name}</TableCell>
+                    <TableCell sx={{ fontWeight: 600, fontSize: '0.875rem', color: '#2c2528' }}>{u.name}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>
                       <Chip
                         label={u.role}
                         size="small"
                         color={u.role === 'SUPER_ADMIN' ? 'error' : u.role === 'SALON_OWNER' ? 'primary' : 'default'}
+                        sx={{ fontWeight: 600 }}
                       />
                     </TableCell>
-                    <TableCell>{u.salonId?.name || (u.role === 'SUPER_ADMIN' ? 'Global Admin' : '-')}</TableCell>
+                    <TableCell>
+                      {u.salonId?.name ? (
+                        <Chip
+                          icon={<StorefrontIcon style={{ fontSize: 16 }} />}
+                          label={u.salonId.name}
+                          size="small"
+                          variant="outlined"
+                          sx={{ borderColor: '#be4b6e', color: '#be4b6e', fontWeight: 500 }}
+                        />
+                      ) : (
+                        <Typography sx={{ fontSize: '0.85rem', color: '#8a7e82' }}>
+                          {u.role === 'SUPER_ADMIN' ? 'Global Platform Admin' : 'Unassigned'}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusChip status={u.status || (u.isActive !== false ? 'ACTIVE' : 'DEACTIVATED')} />
+                    </TableCell>
                     <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
                   </TableRow>
                 ))
               )}
-              {!loading && users.length === 0 && (
+              {!loading && filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 3, color: '#8a7e82' }}>
-                    No users found
+                  <TableCell colSpan={6} align="center" sx={{ py: 3, color: '#8a7e82' }}>
+                    No users found matching salon criteria
                   </TableCell>
                 </TableRow>
               )}
@@ -150,7 +246,7 @@ const Users = () => {
       <DetailModal
         open={Boolean(detailData)}
         onClose={() => setDetailData(null)}
-        title={detailData ? `User: ${detailData.name}` : 'Details'}
+        title={detailData ? `User Profile: ${detailData.name}` : 'Details'}
         data={detailData}
       />
 
@@ -172,10 +268,10 @@ const Users = () => {
                 </Select>
               </FormControl>
 
-              {user?.role === 'SUPER_ADMIN' && role === 'RECEPTIONIST' && (
+              {user?.role === 'SUPER_ADMIN' && (role === 'SALON_OWNER' || role === 'RECEPTIONIST') && (
                 <FormControl fullWidth required>
-                  <InputLabel>Assign Salon</InputLabel>
-                  <Select value={salonId} label="Assign Salon" onChange={(e) => setSalonId(e.target.value)}>
+                  <InputLabel>Assign Salon Business</InputLabel>
+                  <Select value={salonId} label="Assign Salon Business" onChange={(e) => setSalonId(e.target.value)}>
                     {salons.map((s) => (
                       <MenuItem key={s._id} value={s._id}>
                         {s.name}
