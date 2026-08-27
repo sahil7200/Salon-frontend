@@ -9,6 +9,7 @@ import Layout from './components/Layout';
 const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Appointments = lazy(() => import('./pages/Appointments'));
+const Staff = lazy(() => import('./pages/Staff'));
 const Clients = lazy(() => import('./pages/Clients'));
 const Users = lazy(() => import('./pages/Users'));
 const Plans = lazy(() => import('./pages/Plans'));
@@ -241,6 +242,9 @@ const App = () => (
               {/* Owner & Receptionist routes */}
               <Route path="/appointments" element={
                 <ProtectedRoute allowedRoles={['SALON_OWNER', 'RECEPTIONIST']}><Appointments /></ProtectedRoute>
+              } />
+              <Route path="/staff" element={
+                <ProtectedRoute allowedRoles={['SALON_OWNER', 'RECEPTIONIST']}><Staff /></ProtectedRoute>
               } />
               <Route path="/clients" element={
                 <ProtectedRoute allowedRoles={['SALON_OWNER', 'RECEPTIONIST']}><Clients /></ProtectedRoute>

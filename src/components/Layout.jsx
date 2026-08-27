@@ -8,6 +8,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import PeopleIcon from '@mui/icons-material/People';
+import BadgeIcon from '@mui/icons-material/Badge';
 import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import ReceiptIcon from '@mui/icons-material/Receipt';
@@ -34,6 +35,7 @@ const navItems = {
   SALON_OWNER: [
     { text: 'Dashboard', path: '/dashboard', icon: DashboardIcon },
     { text: 'Appointments', path: '/appointments', icon: EventNoteIcon },
+    { text: 'Staff', path: '/staff', icon: BadgeIcon },
     { text: 'Clients', path: '/clients', icon: PeopleIcon },
     { text: 'Users', path: '/users', icon: PeopleIcon },
     { text: 'Subscription', path: '/subscription-status', icon: SubscriptionsIcon },
@@ -41,6 +43,7 @@ const navItems = {
   RECEPTIONIST: [
     { text: 'Dashboard', path: '/dashboard', icon: DashboardIcon },
     { text: 'Appointments', path: '/appointments', icon: EventNoteIcon },
+    { text: 'Staff', path: '/staff', icon: BadgeIcon },
     { text: 'Clients', path: '/clients', icon: PeopleIcon },
   ],
 };
