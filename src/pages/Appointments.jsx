@@ -13,6 +13,8 @@ import { getAppointments, createAppointment, updateAppointmentStatus, getClients
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
 import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import DetailModal from '../components/common/DetailModal';
 import { useAuth } from '../context/AuthContext';
 
 const DEFAULT_SERVICES = [
@@ -28,13 +30,16 @@ const Appointments = () => {
   const [clients, setClients] = useState([]);
   const [staffList, setStaffList] = useState([]);
   const [servicesList, setServicesList] = useState(DEFAULT_SERVICES);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [detailData, setDetailData] = useState(null);
   const [form, setForm] = useState({ client: '', serviceId: '', service: '', staff: '', date: '', startTime: '' });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
+      setLoading(true);
       const [aptRes, cliRes, stfRes, srvRes] = await Promise.all([
         getAppointments(),
         getClients(),
@@ -53,6 +58,8 @@ const Appointments = () => {
       setServicesList(srvData.length > 0 ? srvData : DEFAULT_SERVICES);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -60,7 +67,7 @@ const Appointments = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     try {
       await createAppointment(form);
@@ -70,11 +77,12 @@ const Appointments = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create appointment');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleStatusUpdate = async (id, status) => {
+  const handleStatusUpdate = async (id, status, e) => {
+    if (e) e.stopPropagation();
     try {
       await updateAppointmentStatus(id, status);
       loadData();
@@ -103,66 +111,83 @@ const Appointments = () => {
               <TableCell>Date</TableCell>
               <TableCell>Time</TableCell>
               <TableCell>Status</TableCell>
-              {isOwner && <TableCell>Actions</TableCell>}
+              {isOwner && <TableCell align="right">Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
-            {appointments.map((apt) => (
-              <TableRow key={apt._id}>
-                <TableCell>
-                  <Typography sx={{ fontWeight: 500, fontSize: '0.875rem' }}>{apt.client?.name || 'N/A'}</Typography>
-                </TableCell>
-                <TableCell>{apt.serviceNameSnapshot || apt.service || 'N/A'}</TableCell>
-                <TableCell>{apt.staff?.name || 'N/A'}</TableCell>
-                <TableCell>{new Date(apt.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Typography sx={{ fontSize: '0.85rem', color: '#6b5e62' }}>
-                    {apt.startTime} – {apt.endTime}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <StatusChip status={apt.status} />
-                </TableCell>
-                {isOwner && (
+            {loading ? (
+              <TableSkeleton rows={5} columns={isOwner ? 7 : 6} />
+            ) : (
+              appointments.map((apt) => (
+                <TableRow
+                  key={apt._id}
+                  hover
+                  onClick={() => setDetailData(apt)}
+                  sx={{ cursor: 'pointer' }}
+                >
                   <TableCell>
-                    <Stack direction="row" spacing={1}>
-                      {apt.status === 'PENDING' && (
-                        <Tooltip title="Confirm">
-                          <IconButton size="small" color="primary" onClick={() => handleStatusUpdate(apt._id, 'CONFIRMED')}>
-                            <CheckCircleIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {apt.status === 'CONFIRMED' && (
-                        <Tooltip title="Start (In Progress)">
-                          <IconButton size="small" color="info" onClick={() => handleStatusUpdate(apt._id, 'IN_PROGRESS')}>
-                            <PlayArrowIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {apt.status === 'IN_PROGRESS' && (
-                        <Tooltip title="Complete">
-                          <IconButton size="small" color="success" onClick={() => handleStatusUpdate(apt._id, 'COMPLETED')}>
-                            <DoneAllIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {['PENDING', 'CONFIRMED'].includes(apt.status) && (
-                        <Tooltip title="Cancel">
-                          <IconButton size="small" color="error" onClick={() => handleStatusUpdate(apt._id, 'CANCELLED')}>
-                            <CancelIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
+                    <Typography sx={{ fontWeight: 500, fontSize: '0.875rem' }}>{apt.client?.name || 'N/A'}</Typography>
                   </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {appointments.length === 0 && <EmptyState colSpan={isOwner ? 7 : 6} message="No appointments found" />}
+                  <TableCell>{apt.serviceNameSnapshot || apt.service || 'N/A'}</TableCell>
+                  <TableCell>{apt.staff?.name || 'N/A'}</TableCell>
+                  <TableCell>{new Date(apt.date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Typography sx={{ fontSize: '0.85rem', color: '#6b5e62' }}>
+                      {apt.startTime} – {apt.endTime}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <StatusChip status={apt.status} />
+                  </TableCell>
+                  {isOwner && (
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1} justifyContent="flex-end">
+                        {apt.status === 'PENDING' && (
+                          <Tooltip title="Confirm">
+                            <IconButton size="small" color="primary" onClick={(e) => handleStatusUpdate(apt._id, 'CONFIRMED', e)}>
+                              <CheckCircleIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {apt.status === 'CONFIRMED' && (
+                          <Tooltip title="Start (In Progress)">
+                            <IconButton size="small" color="info" onClick={(e) => handleStatusUpdate(apt._id, 'IN_PROGRESS', e)}>
+                              <PlayArrowIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {apt.status === 'IN_PROGRESS' && (
+                          <Tooltip title="Complete">
+                            <IconButton size="small" color="success" onClick={(e) => handleStatusUpdate(apt._id, 'COMPLETED', e)}>
+                              <DoneAllIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {['PENDING', 'CONFIRMED'].includes(apt.status) && (
+                          <Tooltip title="Cancel">
+                            <IconButton size="small" color="error" onClick={(e) => handleStatusUpdate(apt._id, 'CANCELLED', e)}>
+                              <CancelIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            )}
+            {!loading && appointments.length === 0 && <EmptyState colSpan={isOwner ? 7 : 6} message="No appointments found" />}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Row Detail Modal */}
+      <DetailModal
+        open={Boolean(detailData)}
+        onClose={() => setDetailData(null)}
+        title="Appointment Details"
+        data={detailData}
+      />
 
       {/* Booking Dialog */}
       {isOwner && (
@@ -252,8 +277,8 @@ const Appointments = () => {
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 3 }}>
               <Button onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" variant="contained" disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
-                {loading ? 'Booking...' : 'Book Appointment'}
+              <Button type="submit" variant="contained" disabled={submitting} sx={{ bgcolor: '#be4b6e' }}>
+                {submitting ? 'Booking...' : 'Book Appointment'}
               </Button>
             </DialogActions>
           </Box>

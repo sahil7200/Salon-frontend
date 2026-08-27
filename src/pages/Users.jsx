@@ -7,6 +7,8 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
+import TableSkeleton from '../components/common/TableSkeleton';
+import DetailModal from '../components/common/DetailModal';
 import { getUsers, createUser, getSalons } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,6 +18,7 @@ const Users = () => {
   const [salons, setSalons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
+  const [detailData, setDetailData] = useState(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -107,22 +110,31 @@ const Users = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((u) => (
-                <TableRow key={u._id}>
-                  <TableCell sx={{ fontWeight: 500 }}>{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={u.role}
-                      size="small"
-                      color={u.role === 'SUPER_ADMIN' ? 'error' : u.role === 'SALON_OWNER' ? 'primary' : 'default'}
-                    />
-                  </TableCell>
-                  <TableCell>{u.salonId?.name || (u.role === 'SUPER_ADMIN' ? 'Global Admin' : '-')}</TableCell>
-                  <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
-                </TableRow>
-              ))}
-              {users.length === 0 && (
+              {loading ? (
+                <TableSkeleton rows={5} columns={5} />
+              ) : (
+                users.map((u) => (
+                  <TableRow
+                    key={u._id}
+                    hover
+                    onClick={() => setDetailData(u)}
+                    sx={{ cursor: 'pointer' }}
+                  >
+                    <TableCell sx={{ fontWeight: 500 }}>{u.name}</TableCell>
+                    <TableCell>{u.email}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={u.role}
+                        size="small"
+                        color={u.role === 'SUPER_ADMIN' ? 'error' : u.role === 'SALON_OWNER' ? 'primary' : 'default'}
+                      />
+                    </TableCell>
+                    <TableCell>{u.salonId?.name || (u.role === 'SUPER_ADMIN' ? 'Global Admin' : '-')}</TableCell>
+                    <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))
+              )}
+              {!loading && users.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 3, color: '#8a7e82' }}>
                     No users found
@@ -134,35 +146,23 @@ const Users = () => {
         </CardContent>
       </Card>
 
+      {/* Detail Modal */}
+      <DetailModal
+        open={Boolean(detailData)}
+        onClose={() => setDetailData(null)}
+        title={detailData ? `User: ${detailData.name}` : 'Details'}
+        data={detailData}
+      />
+
       {/* Modal */}
       <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
         <Box component="form" onSubmit={handleCreateUser}>
           <DialogTitle sx={{ fontWeight: 600 }}>Create New User</DialogTitle>
           <DialogContent>
             <Stack spacing={2.5} sx={{ mt: 1 }}>
-              <TextField
-                label="Full Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                fullWidth
-              />
-              <TextField
-                type="email"
-                label="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                fullWidth
-              />
-              <TextField
-                type="password"
-                label="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                fullWidth
-              />
+              <TextField label="Full Name" value={name} onChange={(e) => setName(e.target.value)} required fullWidth />
+              <TextField type="email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)} required fullWidth />
+              <TextField type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)} required fullWidth />
               <FormControl fullWidth>
                 <InputLabel>Role</InputLabel>
                 <Select value={role} label="Role" onChange={(e) => setRole(e.target.value)}>

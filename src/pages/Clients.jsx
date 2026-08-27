@@ -8,6 +8,8 @@ import AddIcon from '@mui/icons-material/Add';
 import { getClients, createClient } from '../services/api';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import DetailModal from '../components/common/DetailModal';
 import { useAuth } from '../context/AuthContext';
 
 const AVATAR_COLORS = ['#be4b6e', '#5b7e9e', '#c9a96e', '#5b8a5e', '#9a6fb0', '#c9923e'];
@@ -22,25 +24,30 @@ const Clients = () => {
   const { user } = useAuth();
   const isOwner = user?.role === 'SALON_OWNER' || user?.role === 'SUPER_ADMIN';
   const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [detailData, setDetailData] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadClients = useCallback(async () => {
     try {
+      setLoading(true);
       const res = await getClients();
       const clientList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setClients(clientList);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => { loadClients(); }, [loadClients]);
 
   const handleCreate = async () => {
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     try {
       await createClient(form);
@@ -50,7 +57,7 @@ const Clients = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create client');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -58,7 +65,7 @@ const Clients = () => {
     <Box>
       <PageHeader
         title="Clients"
-        subtitle="Manage client contact details"
+        subtitle="Manage client contact details & history"
         actionLabel={isOwner ? "New Client" : null}
         actionIcon={<AddIcon />}
         onActionClick={() => setOpen(true)}
@@ -75,32 +82,49 @@ const Clients = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {clients.map((c) => (
-              <TableRow key={c._id}>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Avatar
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        fontSize: '0.85rem',
-                        bgcolor: getAvatarColor(c.name),
-                      }}
-                    >
-                      {c.name?.charAt(0)?.toUpperCase()}
-                    </Avatar>
-                    <Typography sx={{ fontWeight: 500, fontSize: '0.875rem' }}>{c.name}</Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>{c.phone}</TableCell>
-                <TableCell>{c.email || 'N/A'}</TableCell>
-                <TableCell>{new Date(c.createdAt).toLocaleDateString()}</TableCell>
-              </TableRow>
-            ))}
-            {clients.length === 0 && <EmptyState colSpan={4} message="No clients found" />}
+            {loading ? (
+              <TableSkeleton rows={5} columns={4} />
+            ) : (
+              clients.map((c) => (
+                <TableRow
+                  key={c._id}
+                  hover
+                  onClick={() => setDetailData(c)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '0.85rem',
+                          bgcolor: getAvatarColor(c.name),
+                        }}
+                      >
+                        {c.name?.charAt(0)?.toUpperCase()}
+                      </Avatar>
+                      <Typography sx={{ fontWeight: 500, fontSize: '0.875rem' }}>{c.name}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>{c.phone}</TableCell>
+                  <TableCell>{c.email || 'N/A'}</TableCell>
+                  <TableCell>{new Date(c.createdAt).toLocaleDateString()}</TableCell>
+                </TableRow>
+              ))
+            )}
+            {!loading && clients.length === 0 && <EmptyState colSpan={4} message="No clients found" />}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Row Detail Modal */}
+      <DetailModal
+        open={Boolean(detailData)}
+        onClose={() => setDetailData(null)}
+        title={detailData ? `Client: ${detailData.name}` : 'Details'}
+        data={detailData}
+      />
 
       {isOwner && (
         <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
@@ -134,8 +158,8 @@ const Clients = () => {
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3 }}>
             <Button onClick={() => setOpen(false)}>Cancel</Button>
-            <Button variant="contained" onClick={handleCreate} disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
-              {loading ? 'Creating...' : 'Create Client'}
+            <Button variant="contained" onClick={handleCreate} disabled={submitting} sx={{ bgcolor: '#be4b6e' }}>
+              {submitting ? 'Creating...' : 'Create Client'}
             </Button>
           </DialogActions>
         </Dialog>

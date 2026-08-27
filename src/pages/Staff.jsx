@@ -9,6 +9,8 @@ import { getStaff, createStaff } from '../services/api';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
 import StatusChip from '../components/common/StatusChip';
+import TableSkeleton from '../components/common/TableSkeleton';
+import DetailModal from '../components/common/DetailModal';
 import { useAuth } from '../context/AuthContext';
 
 const AVATAR_COLORS = ['#be4b6e', '#5b7e9e', '#c9a96e', '#5b8a5e', '#9a6fb0', '#c9923e'];
@@ -23,18 +25,23 @@ const Staff = () => {
   const { user } = useAuth();
   const isOwner = user?.role === 'SALON_OWNER' || user?.role === 'SUPER_ADMIN';
   const [staffList, setStaffList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [detailData, setDetailData] = useState(null);
   const [form, setForm] = useState({ name: '', phone: '' });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const loadStaff = useCallback(async () => {
     try {
+      setLoading(true);
       const res = await getStaff();
       const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
       setStaffList(list);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -42,7 +49,7 @@ const Staff = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     setError('');
     try {
       await createStaff(form);
@@ -52,7 +59,7 @@ const Staff = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to add staff member');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -78,41 +85,58 @@ const Staff = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {staffList.map((s) => (
-              <TableRow key={s._id}>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Avatar
-                      sx={{
-                        width: 32,
-                        height: 32,
-                        fontSize: '0.85rem',
-                        bgcolor: getAvatarColor(s.name),
-                      }}
-                    >
-                      {s.name?.charAt(0)?.toUpperCase()}
-                    </Avatar>
-                    <Typography sx={{ fontWeight: 500, fontSize: '0.875rem' }}>{s.name}</Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>{s.phone}</TableCell>
-                <TableCell>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                    {(s.services || ['Haircut', 'Facial', 'Hair Color']).map((srv) => (
-                      <Chip key={srv} label={srv} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
-                    ))}
-                  </Stack>
-                </TableCell>
-                <TableCell>
-                  <StatusChip status={s.status || (s.isActive !== false ? 'ACTIVE' : 'INACTIVE')} />
-                </TableCell>
-                <TableCell>{new Date(s.createdAt).toLocaleDateString()}</TableCell>
-              </TableRow>
-            ))}
-            {staffList.length === 0 && <EmptyState colSpan={5} message="No staff members found" />}
+            {loading ? (
+              <TableSkeleton rows={4} columns={5} />
+            ) : (
+              staffList.map((s) => (
+                <TableRow
+                  key={s._id}
+                  hover
+                  onClick={() => setDetailData(s)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          fontSize: '0.85rem',
+                          bgcolor: getAvatarColor(s.name),
+                        }}
+                      >
+                        {s.name?.charAt(0)?.toUpperCase()}
+                      </Avatar>
+                      <Typography sx={{ fontWeight: 500, fontSize: '0.875rem' }}>{s.name}</Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell>{s.phone}</TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                      {(s.services || ['Haircut', 'Facial', 'Hair Color']).map((srv) => (
+                        <Chip key={srv} label={srv} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
+                      ))}
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <StatusChip status={s.status || (s.isActive !== false ? 'ACTIVE' : 'INACTIVE')} />
+                  </TableCell>
+                  <TableCell>{new Date(s.createdAt).toLocaleDateString()}</TableCell>
+                </TableRow>
+              ))
+            )}
+            {!loading && staffList.length === 0 && <EmptyState colSpan={5} message="No staff members found" />}
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Row Detail Modal */}
+      <DetailModal
+        open={Boolean(detailData)}
+        onClose={() => setDetailData(null)}
+        title={detailData ? `Staff Member: ${detailData.name}` : 'Details'}
+        data={detailData}
+      />
 
       {/* Add Staff Dialog */}
       {isOwner && (
@@ -141,8 +165,8 @@ const Staff = () => {
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 3 }}>
               <Button onClick={() => setOpen(false)}>Cancel</Button>
-              <Button type="submit" variant="contained" disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
-                {loading ? 'Adding...' : 'Add Staff Member'}
+              <Button type="submit" variant="contained" disabled={submitting} sx={{ bgcolor: '#be4b6e' }}>
+                {submitting ? 'Adding...' : 'Add Staff Member'}
               </Button>
             </DialogActions>
           </Box>
