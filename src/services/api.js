@@ -53,20 +53,26 @@ export const getSubscriptionHistory = () => api.get('/salons/subscriptions/histo
 export const getAppointments = (params) => api.get('/appointments', { params });
 export const getTodayCount = () => api.get('/appointments/today-count');
 export const createAppointment = (data) => api.post('/appointments', data);
-export const updateAppointmentStatus = (id, status) => api.patch(`/appointments/${id}/status`, { status });
+export const updateAppointmentStatus = (id, status, cancellationReason) =>
+  api.patch(`/appointments/${id}/status`, { status, cancellationReason });
 
 // Clients
 export const getClients = () => api.get('/clients');
 export const createClient = (data) => api.post('/clients', data);
+export const deactivateClient = (id) => api.patch(`/clients/${id}/deactivate`);
 
 // Staff
 export const getStaff = () => api.get('/staff');
+export const createStaff = (data) => api.post('/staff', data);
+export const deactivateStaff = (id) => api.patch(`/staff/${id}/deactivate`);
 
 // Services
 export const getServices = () => api.get('/services');
+export const createService = (data) => api.post('/services', data);
 
 // Attendance
 export const checkIn = (data) => api.post('/attendance/check-in', data);
+export const checkOut = (data) => api.post('/attendance/check-out', data);
 export const getTodayAttendance = () => api.get('/attendance/today');
 
 export default api;
