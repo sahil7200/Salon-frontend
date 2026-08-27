@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert, Stack, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert, Stack, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton, Card, CardContent, Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
-import { getSalons, createSalon, getPlans, assignPlan } from '../services/api';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
+import { getSalons, createSalon, getPlans, assignPlan, approveSubscriptionRequest } from '../services/api';
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
 import EmptyState from '../components/common/EmptyState';
@@ -108,6 +111,18 @@ const Salons = () => {
     }
   };
 
+  const handleApproveSubscription = async (salonId, approve) => {
+    setError('');
+    setSuccess('');
+    try {
+      const res = await approveSubscriptionRequest({ salonId, approve });
+      setSuccess(res.data?.message || 'Subscription request processed');
+      loadSalons();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to process subscription request');
+    }
+  };
+
   const openPlanDialog = (salon, e) => {
     e.stopPropagation();
     setSelectedSalon(salon);
@@ -116,11 +131,13 @@ const Salons = () => {
     setOpenPlanModal(true);
   };
 
+  const pendingSalons = salons.filter((s) => s.pendingPlan || s.subscriptionStatus === 'PENDING_APPROVAL');
+
   return (
     <Box>
       <PageHeader
         title="Salons"
-        subtitle="All registered salon businesses"
+        subtitle="All registered salon businesses & subscription requests"
         actionLabel={user?.role === 'SUPER_ADMIN' ? 'Create Salon' : null}
         actionIcon={<AddIcon />}
         onActionClick={() => setOpenCreateModal(true)}
@@ -135,6 +152,53 @@ const Salons = () => {
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
         </Alert>
+      )}
+
+      {/* Super Admin Pending Subscription Requests Banner */}
+      {user?.role === 'SUPER_ADMIN' && pendingSalons.length > 0 && (
+        <Paper sx={{ p: 3, mb: 4, bgcolor: '#fdf3e4', border: '1px solid #c9923e', borderRadius: 2 }}>
+          <Box display="flex" alignItems="center" gap={1.5} mb={2}>
+            <HourglassEmptyIcon sx={{ color: '#c9923e', fontSize: 28 }} />
+            <Typography sx={{ fontWeight: 600, color: '#c9923e', fontSize: '1.1rem' }}>
+              Pending Salon Subscription Requests ({pendingSalons.length})
+            </Typography>
+          </Box>
+
+          <Stack spacing={2}>
+            {pendingSalons.map((s) => (
+              <Card key={s._id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                <Box>
+                  <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
+                    Salon: {s.name} ({s.ownerId?.email})
+                  </Typography>
+                  <Typography sx={{ fontSize: '0.85rem', color: '#8a7e82' }}>
+                    Requested Plan: <strong>{s.pendingPlan?.name || 'Subscription Plan'}</strong> (₹{s.pendingPlan?.price} / {s.pendingPlan?.durationInDays} days)
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={1.5}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    color="success"
+                    startIcon={<CheckCircleIcon />}
+                    onClick={() => handleApproveSubscription(s._id, true)}
+                  >
+                    Approve Plan
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    color="error"
+                    startIcon={<CancelIcon />}
+                    onClick={() => handleApproveSubscription(s._id, false)}
+                  >
+                    Reject
+                  </Button>
+                </Stack>
+              </Card>
+            ))}
+          </Stack>
+        </Paper>
       )}
 
       <TableContainer component={Paper}>
@@ -170,7 +234,12 @@ const Salons = () => {
                       {salon.address || 'Not set'}
                     </Typography>
                   </TableCell>
-                  <TableCell>{salon.currentPlan?.name || 'No Plan'}</TableCell>
+                  <TableCell>
+                    {salon.currentPlan?.name || 'No Plan'}
+                    {salon.pendingPlan && (
+                      <Chip label={`Req: ${salon.pendingPlan.name}`} size="small" color="warning" sx={{ ml: 1, fontSize: '0.7rem' }} />
+                    )}
+                  </TableCell>
                   <TableCell>
                     <StatusChip status={salon.subscriptionStatus} />
                   </TableCell>
