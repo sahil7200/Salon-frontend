@@ -28,11 +28,13 @@ const Users = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data } = await getUsers();
-      setUsers(data);
+      const res = await getUsers();
+      const userList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setUsers(userList);
       if (user?.role === 'SUPER_ADMIN') {
-        const { data: salonData } = await getSalons();
-        setSalons(salonData);
+        const salonRes = await getSalons();
+        const salonList = Array.isArray(salonRes.data) ? salonRes.data : (salonRes.data?.data || []);
+        setSalons(salonList);
       }
     } catch (err) {
       setError('Failed to load users');
@@ -59,7 +61,6 @@ const Users = () => {
       });
       setSuccess(`User '${name}' created successfully! Credentials: Email ${email} | Password ${password}`);
       setOpenModal(false);
-      // Reset form
       setName('');
       setEmail('');
       setPassword('');
@@ -119,6 +120,13 @@ const Users = () => {
                   <TableCell>{new Date(u.createdAt).toLocaleDateString()}</TableCell>
                 </TableRow>
               ))}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 3, color: '#8a7e82' }}>
+                    No users found
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

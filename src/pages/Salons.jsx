@@ -28,11 +28,13 @@ const Salons = () => {
 
   const loadSalons = useCallback(async () => {
     try {
-      const { data } = await getSalons();
-      setSalons(data);
+      const res = await getSalons();
+      const salonList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setSalons(salonList);
       if (user?.role === 'SUPER_ADMIN') {
-        const { data: plansData } = await getPlans();
-        setPlans(plansData);
+        const plansRes = await getPlans();
+        const planList = Array.isArray(plansRes.data) ? plansRes.data : (plansRes.data?.data || []);
+        setPlans(planList);
       }
     } catch (err) {
       console.error(err);

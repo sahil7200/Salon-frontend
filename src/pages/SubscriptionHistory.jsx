@@ -10,8 +10,9 @@ const SubscriptionHistory = () => {
 
   const loadHistory = useCallback(async () => {
     try {
-      const { data } = await getSubscriptionHistory();
-      setHistory(data);
+      const res = await getSubscriptionHistory();
+      const historyList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setHistory(historyList);
     } catch (err) {
       console.error(err);
     }
@@ -48,16 +49,10 @@ const SubscriptionHistory = () => {
                 <TableCell>
                   <StatusChip status={h.action} />
                 </TableCell>
-                <TableCell>
-                  <Typography sx={{ fontWeight: 500 }}>₹{h.price.toLocaleString()}</Typography>
-                </TableCell>
+                <TableCell>₹{h.price}</TableCell>
                 <TableCell>{new Date(h.startDate).toLocaleDateString()}</TableCell>
                 <TableCell>{new Date(h.endDate).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Typography sx={{ fontSize: '0.85rem', color: '#8a7e82' }}>
-                    {new Date(h.createdAt).toLocaleDateString()}
-                  </Typography>
-                </TableCell>
+                <TableCell>{new Date(h.createdAt).toLocaleDateString()}</TableCell>
               </TableRow>
             ))}
             {history.length === 0 && <EmptyState colSpan={7} message="No subscription history found" />}

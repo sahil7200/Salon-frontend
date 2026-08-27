@@ -26,8 +26,9 @@ const Clients = () => {
 
   const loadClients = useCallback(async () => {
     try {
-      const { data } = await getClients();
-      setClients(data);
+      const res = await getClients();
+      const clientList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setClients(clientList);
     } catch (err) {
       console.error(err);
     }
@@ -54,8 +55,8 @@ const Clients = () => {
     <Box>
       <PageHeader
         title="Clients"
-        subtitle="Your client directory"
-        actionLabel="Add Client"
+        subtitle="Manage client contact details"
+        actionLabel="New Client"
         actionIcon={<AddIcon />}
         onActionClick={() => setOpen(true)}
       />
@@ -64,10 +65,10 @@ const Clients = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Phone</TableCell>
+              <TableCell>Client Name</TableCell>
+              <TableCell>Phone Number</TableCell>
               <TableCell>Email</TableCell>
-              <TableCell>Added</TableCell>
+              <TableCell>Joined Date</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -79,8 +80,7 @@ const Clients = () => {
                       sx={{
                         width: 32,
                         height: 32,
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
+                        fontSize: '0.85rem',
                         bgcolor: getAvatarColor(c.name),
                       }}
                     >
@@ -90,11 +90,7 @@ const Clients = () => {
                   </Box>
                 </TableCell>
                 <TableCell>{c.phone}</TableCell>
-                <TableCell>
-                  <Typography sx={{ color: c.email ? '#2c2528' : '#b5adb0', fontSize: '0.875rem' }}>
-                    {c.email || 'Not provided'}
-                  </Typography>
-                </TableCell>
+                <TableCell>{c.email || 'N/A'}</TableCell>
                 <TableCell>{new Date(c.createdAt).toLocaleDateString()}</TableCell>
               </TableRow>
             ))}
@@ -104,17 +100,38 @@ const Clients = () => {
       </TableContainer>
 
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Client</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>Create New Client</DialogTitle>
         <DialogContent>
-          {error && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
-          <TextField fullWidth label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} margin="normal" required />
-          <TextField fullWidth label="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} margin="normal" required />
-          <TextField fullWidth label="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} margin="normal" />
+          {error && <Alert severity="error" sx={{ mb: 2, mt: 1 }}>{error}</Alert>}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              label="Full Name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+              fullWidth
+            />
+            <TextField
+              label="Phone Number"
+              placeholder="+91-9876543210"
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              required
+              fullWidth
+            />
+            <TextField
+              type="email"
+              label="Email Address"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              fullWidth
+            />
+          </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setOpen(false)} sx={{ color: '#8a7e82' }}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={loading}>
-            {loading ? 'Adding...' : 'Add'}
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleCreate} disabled={loading} sx={{ bgcolor: '#be4b6e' }}>
+            {loading ? 'Creating...' : 'Create Client'}
           </Button>
         </DialogActions>
       </Dialog>
