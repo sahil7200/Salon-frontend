@@ -12,8 +12,9 @@ const SubscriptionStatus = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data } = await getSalons();
-        if (data.length > 0) setSalon(data[0]);
+        const res = await getSalons();
+        const salonList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        if (salonList.length > 0) setSalon(salonList[0]);
       } catch (err) {
         console.error(err);
       }
@@ -22,10 +23,10 @@ const SubscriptionStatus = () => {
   }, []);
 
   if (!salon) {
-    return <Typography sx={{ color: '#8a7e82', p: 2 }}>Loading...</Typography>;
+    return <Typography sx={{ color: '#8a7e82', p: 2 }}>Loading subscription details...</Typography>;
   }
 
-  const isActive = salon.subscriptionStatus === 'ACTIVE';
+  const isActive = salon.subscriptionStatus === 'ACTIVE' || salon.subscriptionStatus === 'TRIAL';
   const totalDays = salon.currentPlan?.durationInDays || 30;
   const daysLeft = isActive && salon.subscriptionEndDate
     ? Math.max(0, Math.ceil((new Date(salon.subscriptionEndDate) - new Date()) / (1000 * 60 * 60 * 24)))
@@ -41,7 +42,7 @@ const SubscriptionStatus = () => {
 
   return (
     <Box>
-      <PageHeader title="Subscription Status" subtitle="Your current plan details" />
+      <PageHeader title="Subscription Status" subtitle="Your current plan details & status" />
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={7}>
@@ -68,67 +69,63 @@ const SubscriptionStatus = () => {
                   <Typography
                     sx={{
                       fontFamily: '"Playfair Display", Georgia, serif',
-                      fontSize: '1.1rem',
-                      fontWeight: 500,
+                      fontSize: '1.25rem',
+                      fontWeight: 600,
                       color: '#2c2528',
                     }}
                   >
-                    {isActive ? 'Active Subscription' : 'No Active Subscription'}
+                    {salon.currentPlan?.name || 'No Active Plan'}
                   </Typography>
-                  <Box sx={{ mt: 0.5 }}>
+                  <Box display="flex" alignItems="center" gap={1} mt={0.5}>
                     <StatusChip status={salon.subscriptionStatus} />
+                    {isActive && (
+                      <Typography sx={{ fontSize: '0.8rem', color: '#8a7e82' }}>
+                        {daysLeft} days remaining
+                      </Typography>
+                    )}
                   </Box>
                 </Box>
               </Box>
 
-              {/* Plan details */}
-              <InfoRow label="Plan" value={salon.currentPlan?.name || 'No Plan'} />
-              <InfoRow label="Price" value={`₹${salon.currentPlan?.price?.toLocaleString() || 'N/A'}`} />
-              <InfoRow
-                label="Start Date"
-                value={salon.subscriptionStartDate
-                  ? new Date(salon.subscriptionStartDate).toLocaleDateString()
-                  : 'N/A'}
-              />
-              <InfoRow
-                label="End Date"
-                value={salon.subscriptionEndDate
-                  ? new Date(salon.subscriptionEndDate).toLocaleDateString()
-                  : 'N/A'}
-              />
-
-              {/* Days remaining with progress */}
+              {/* Progress bar */}
               {isActive && (
-                <Box sx={{ mt: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography sx={{ fontSize: '0.82rem', color: '#8a7e82', fontWeight: 500 }}>
-                      Days Remaining
-                    </Typography>
-                    <Typography
-                      sx={{
-                        fontSize: '0.9rem',
-                        fontWeight: 700,
-                        color: daysLeft < 7 ? '#c45c5c' : '#5b8a5e',
-                      }}
-                    >
-                      {daysLeft} days
+                <Box mb={3}>
+                  <Box display="flex" justifyContent="space-between" mb={0.75}>
+                    <Typography sx={{ fontSize: '0.78rem', color: '#8a7e82' }}>Subscription Period</Typography>
+                    <Typography sx={{ fontSize: '0.78rem', color: '#8a7e82', fontWeight: 600 }}>
+                      {daysLeft} / {totalDays} days left
                     </Typography>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={Math.min(progress, 100)}
+                    value={Math.min(100, Math.max(0, progress))}
                     sx={{
-                      height: 6,
-                      borderRadius: 3,
+                      height: 8,
+                      borderRadius: 4,
                       bgcolor: '#f0ebe7',
                       '& .MuiLinearProgress-bar': {
-                        borderRadius: 3,
-                        bgcolor: daysLeft < 7 ? '#c45c5c' : '#5b8a5e',
+                        bgcolor: daysLeft < 5 ? '#c45c5c' : '#be4b6e',
+                        borderRadius: 4,
                       },
                     }}
                   />
                 </Box>
               )}
+
+              {/* Info list */}
+              <InfoRow label="Salon Name" value={salon.name} />
+              <InfoRow label="Current Plan" value={salon.currentPlan?.name || 'None'} />
+              <InfoRow label="Plan Price" value={salon.currentPlan ? `₹${salon.currentPlan.price}` : 'N/A'} />
+              <InfoRow label="Max Staff Allowed" value={salon.currentPlan?.maxStaff || 'N/A'} />
+              <InfoRow label="Max Appointments Allowed" value={salon.currentPlan?.maxAppointments || 'N/A'} />
+              <InfoRow
+                label="Start Date"
+                value={salon.subscriptionStartDate ? new Date(salon.subscriptionStartDate).toLocaleDateString() : 'N/A'}
+              />
+              <InfoRow
+                label="End Date"
+                value={salon.subscriptionEndDate ? new Date(salon.subscriptionEndDate).toLocaleDateString() : 'N/A'}
+              />
             </CardContent>
           </Card>
         </Grid>
