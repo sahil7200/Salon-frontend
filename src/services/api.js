@@ -32,6 +32,11 @@ api.interceptors.response.use(
 
 // Auth
 export const login = (email, password) => api.post('/auth/login', { email, password });
+export const register = (data) => api.post('/auth/register', data);
+
+// Users
+export const getUsers = () => api.get('/users');
+export const createUser = (data) => api.post('/users', data);
 
 // Plans
 export const getPlans = () => api.get('/plans');
@@ -40,6 +45,7 @@ export const updatePlan = (id, data) => api.put(`/plans/${id}`, data);
 
 // Salons
 export const getSalons = () => api.get('/salons');
+export const createSalon = (data) => api.post('/salons', data);
 export const assignPlan = (data) => api.post('/salons/assign-plan', data);
 export const getSubscriptionHistory = () => api.get('/salons/subscriptions/history');
 

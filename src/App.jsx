@@ -10,6 +10,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Appointments = lazy(() => import('./pages/Appointments'));
 const Clients = lazy(() => import('./pages/Clients'));
+const Users = lazy(() => import('./pages/Users'));
 const Plans = lazy(() => import('./pages/Plans'));
 const Salons = lazy(() => import('./pages/Salons'));
 const SubscriptionHistory = lazy(() => import('./pages/SubscriptionHistory'));
@@ -243,6 +244,9 @@ const App = () => (
               } />
               <Route path="/clients" element={
                 <ProtectedRoute allowedRoles={['SALON_OWNER', 'RECEPTIONIST']}><Clients /></ProtectedRoute>
+              } />
+              <Route path="/users" element={
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN', 'SALON_OWNER']}><Users /></ProtectedRoute>
               } />
               <Route path="/subscription-status" element={
                 <ProtectedRoute allowedRoles={['SALON_OWNER']}><SubscriptionStatus /></ProtectedRoute>

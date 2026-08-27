@@ -26,6 +26,7 @@ const ROLE_LABELS = {
 const navItems = {
   SUPER_ADMIN: [
     { text: 'Dashboard', path: '/dashboard', icon: DashboardIcon },
+    { text: 'Users', path: '/users', icon: PeopleIcon },
     { text: 'Plans', path: '/plans', icon: SubscriptionsIcon },
     { text: 'Salons', path: '/salons', icon: StorefrontIcon },
     { text: 'Subscriptions', path: '/subscriptions', icon: ReceiptIcon },
@@ -34,6 +35,7 @@ const navItems = {
     { text: 'Dashboard', path: '/dashboard', icon: DashboardIcon },
     { text: 'Appointments', path: '/appointments', icon: EventNoteIcon },
     { text: 'Clients', path: '/clients', icon: PeopleIcon },
+    { text: 'Users', path: '/users', icon: PeopleIcon },
     { text: 'Subscription', path: '/subscription-status', icon: SubscriptionsIcon },
   ],
   RECEPTIONIST: [
