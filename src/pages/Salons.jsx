@@ -3,6 +3,7 @@ import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert, Stack, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import { getSalons, createSalon, getPlans } from '../services/api';
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
@@ -78,7 +79,8 @@ const Salons = () => {
         title="Salons"
         subtitle="All registered salon businesses"
         actionLabel={user?.role === 'SUPER_ADMIN' ? 'Create Salon' : null}
-        onAction={() => setOpenModal(true)}
+        actionIcon={<AddIcon />}
+        onActionClick={() => setOpenModal(true)}
       />
 
       {success && (

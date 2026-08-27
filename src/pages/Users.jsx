@@ -4,6 +4,7 @@ import {
   Button, Typography, Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Alert, Select, MenuItem, FormControl, InputLabel, Chip, Stack
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
 import { getUsers, createUser, getSalons } from '../services/api';
@@ -77,7 +78,8 @@ const Users = () => {
         title="User Management"
         subtitle={user?.role === 'SUPER_ADMIN' ? 'Manage platform users & salon credentials' : 'Manage receptionist accounts for your salon'}
         actionLabel="Create User"
-        onAction={() => setOpenModal(true)}
+        actionIcon={<AddIcon />}
+        onActionClick={() => setOpenModal(true)}
       />
 
       {success && (
