@@ -1,14 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert, Stack, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton, Card, CardContent, Chip
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Alert, Stack, MenuItem, Select, FormControl, InputLabel, Tooltip, IconButton
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CardMembershipIcon from '@mui/icons-material/CardMembership';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import CancelIcon from '@mui/icons-material/Cancel';
-import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
-import { getSalons, createSalon, getPlans, assignPlan, approveSubscriptionRequest } from '../services/api';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import { getSalons, createSalon, getPlans, assignPlan } from '../services/api';
 import PageHeader from '../components/common/PageHeader';
 import StatusChip from '../components/common/StatusChip';
 import EmptyState from '../components/common/EmptyState';
@@ -36,6 +34,10 @@ const Salons = () => {
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [planId, setPlanId] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
+  const [allowedRadius, setAllowedRadius] = useState('100');
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
   // Form State - Assign Plan
   const [assignPlanId, setAssignPlanId] = useState('');
@@ -61,6 +63,28 @@ const Salons = () => {
 
   useEffect(() => { loadSalons(); }, [loadSalons]);
 
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation is not supported by your browser');
+      return;
+    }
+    setDetectingLocation(true);
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLatitude(pos.coords.latitude.toFixed(6));
+        setLongitude(pos.coords.longitude.toFixed(6));
+        setDetectingLocation(false);
+        setSuccess('Current GPS coordinates detected!');
+      },
+      (err) => {
+        setError('Failed to get current location: ' + err.message);
+        setDetectingLocation(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
   const handleCreateSalon = async (e) => {
     e.preventDefault();
     setError('');
@@ -74,6 +98,9 @@ const Salons = () => {
         address,
         phone,
         planId,
+        latitude: latitude ? Number(latitude) : undefined,
+        longitude: longitude ? Number(longitude) : undefined,
+        allowedRadius: allowedRadius ? Number(allowedRadius) : 100,
       });
       setSuccess(`Salon '${name}' created! Owner email: ${ownerEmail}`);
       setOpenCreateModal(false);
@@ -84,6 +111,9 @@ const Salons = () => {
       setAddress('');
       setPhone('');
       setPlanId('');
+      setLatitude('');
+      setLongitude('');
+      setAllowedRadius('100');
       loadSalons();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create salon');
@@ -111,18 +141,6 @@ const Salons = () => {
     }
   };
 
-  const handleApproveSubscription = async (salonId, approve) => {
-    setError('');
-    setSuccess('');
-    try {
-      const res = await approveSubscriptionRequest({ salonId, approve });
-      setSuccess(res.data?.message || 'Subscription request processed');
-      loadSalons();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to process subscription request');
-    }
-  };
-
   const openPlanDialog = (salon, e) => {
     e.stopPropagation();
     setSelectedSalon(salon);
@@ -131,13 +149,11 @@ const Salons = () => {
     setOpenPlanModal(true);
   };
 
-  const pendingSalons = salons.filter((s) => s.pendingPlan || s.subscriptionStatus === 'PENDING_APPROVAL');
-
   return (
     <Box>
       <PageHeader
         title="Salons"
-        subtitle="All registered salon businesses & subscription requests"
+        subtitle="All registered salon businesses"
         actionLabel={user?.role === 'SUPER_ADMIN' ? 'Create Salon' : null}
         actionIcon={<AddIcon />}
         onActionClick={() => setOpenCreateModal(true)}
@@ -154,53 +170,6 @@ const Salons = () => {
         </Alert>
       )}
 
-      {/* Super Admin Pending Subscription Requests Banner */}
-      {user?.role === 'SUPER_ADMIN' && pendingSalons.length > 0 && (
-        <Paper sx={{ p: 3, mb: 4, bgcolor: '#fdf3e4', border: '1px solid #c9923e', borderRadius: 2 }}>
-          <Box display="flex" alignItems="center" gap={1.5} mb={2}>
-            <HourglassEmptyIcon sx={{ color: '#c9923e', fontSize: 28 }} />
-            <Typography sx={{ fontWeight: 600, color: '#c9923e', fontSize: '1.1rem' }}>
-              Pending Salon Subscription Requests ({pendingSalons.length})
-            </Typography>
-          </Box>
-
-          <Stack spacing={2}>
-            {pendingSalons.map((s) => (
-              <Card key={s._id} sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                <Box>
-                  <Typography sx={{ fontWeight: 600, fontSize: '0.95rem' }}>
-                    Salon: {s.name} ({s.ownerId?.email})
-                  </Typography>
-                  <Typography sx={{ fontSize: '0.85rem', color: '#8a7e82' }}>
-                    Requested Plan: <strong>{s.pendingPlan?.name || 'Subscription Plan'}</strong> (₹{s.pendingPlan?.price} / {s.pendingPlan?.durationInDays} days)
-                  </Typography>
-                </Box>
-                <Stack direction="row" spacing={1.5}>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={() => handleApproveSubscription(s._id, true)}
-                  >
-                    Approve Plan
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    color="error"
-                    startIcon={<CancelIcon />}
-                    onClick={() => handleApproveSubscription(s._id, false)}
-                  >
-                    Reject
-                  </Button>
-                </Stack>
-              </Card>
-            ))}
-          </Stack>
-        </Paper>
-      )}
-
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -208,6 +177,7 @@ const Salons = () => {
               <TableCell>Salon Name</TableCell>
               <TableCell>Owner</TableCell>
               <TableCell>Address</TableCell>
+              <TableCell>Geo-Fence (Lat, Long)</TableCell>
               <TableCell>Plan</TableCell>
               <TableCell>Status</TableCell>
               <TableCell>Expires</TableCell>
@@ -216,7 +186,7 @@ const Salons = () => {
           </TableHead>
           <TableBody>
             {loading ? (
-              <TableSkeleton rows={5} columns={user?.role === 'SUPER_ADMIN' ? 7 : 6} />
+              <TableSkeleton rows={5} columns={user?.role === 'SUPER_ADMIN' ? 8 : 7} />
             ) : (
               salons.map((salon) => (
                 <TableRow
@@ -235,11 +205,11 @@ const Salons = () => {
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    {salon.currentPlan?.name || 'No Plan'}
-                    {salon.pendingPlan && (
-                      <Chip label={`Req: ${salon.pendingPlan.name}`} size="small" color="warning" sx={{ ml: 1, fontSize: '0.7rem' }} />
-                    )}
+                    <Typography sx={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#475569' }}>
+                      {salon.latitude?.toFixed(4)}, {salon.longitude?.toFixed(4)} ({salon.allowedRadius || 100}m)
+                    </Typography>
                   </TableCell>
+                  <TableCell>{salon.currentPlan?.name || 'No Plan'}</TableCell>
                   <TableCell>
                     <StatusChip status={salon.subscriptionStatus} />
                   </TableCell>
@@ -299,6 +269,55 @@ const Salons = () => {
                   ))}
                 </Select>
               </FormControl>
+
+              {/* Geo-Fence Location Config */}
+              <Box sx={{ p: 2, bgcolor: '#f8fafc', borderRadius: 2, border: '1px solid #e2e8f0' }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#334155' }}>
+                    Geo-Fence Location Config (Optional)
+                  </Typography>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<LocationOnIcon />}
+                    onClick={handleDetectLocation}
+                    disabled={detectingLocation}
+                    sx={{ textTransform: 'none', fontSize: '0.75rem' }}
+                  >
+                    {detectingLocation ? 'Detecting...' : 'Detect My Location'}
+                  </Button>
+                </Stack>
+                <Stack direction="row" spacing={1.5} sx={{ mb: 1.5 }}>
+                  <TextField
+                    label="Latitude"
+                    placeholder="19.0760"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                    fullWidth
+                    size="small"
+                    helperText="Leave empty for default"
+                  />
+                  <TextField
+                    label="Longitude"
+                    placeholder="72.8777"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                    fullWidth
+                    size="small"
+                    helperText="Leave empty for default"
+                  />
+                </Stack>
+                <TextField
+                  label="Allowed Radius (Meters)"
+                  placeholder="100"
+                  type="number"
+                  value={allowedRadius}
+                  onChange={(e) => setAllowedRadius(e.target.value)}
+                  fullWidth
+                  size="small"
+                  helperText="Default geo-fence threshold is 100 meters"
+                />
+              </Box>
             </Stack>
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 3 }}>

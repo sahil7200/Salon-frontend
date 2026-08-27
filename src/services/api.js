@@ -46,9 +46,8 @@ export const updatePlan = (id, data) => api.put(`/plans/${id}`, data);
 // Salons
 export const getSalons = () => api.get('/salons');
 export const createSalon = (data) => api.post('/salons', data);
+export const updateSalon = (id, data) => api.patch(`/salons/${id}`, data);
 export const assignPlan = (data) => api.post('/salons/assign-plan', data);
-export const requestSubscription = (planId) => api.post('/salons/request-subscription', { planId });
-export const approveSubscriptionRequest = (data) => api.post('/salons/approve-subscription', data);
 export const getSubscriptionHistory = () => api.get('/salons/subscriptions/history');
 
 // Appointments
